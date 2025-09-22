@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Exponents Escape Room — Lesson Review (Student)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #fff; color: #111; }
+  header { padding: 16px; border-bottom: 1px solid #ddd; background: #f9fafb; }
+  h1 { margin: 0 0 6px; font-size: 24px; }
+  p.sub { margin: 0; color: #555; }
+  .rooms { max-width: 960px; margin: 20px auto; display: grid; gap: 20px; }
+  .room { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.04); opacity: 1; }
+  .room.locked { opacity: .5; pointer-events: none; }
+  .room .title { background: #f3f4f6; padding: 12px 16px; border-bottom: 1px solid #ddd; }
+  .room .content { padding: 16px; }
+  .problem { margin-bottom: 14px; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
+  .idx { font-weight: bold; margin-bottom: 6px; }
+  .q { margin-bottom: 8px; }
+  .input-area { display: flex; gap: 8px; align-items: center; }
+  input[type=text] { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; }
+  button.small { padding: 6px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; }
+  .feedback { font-size: 13px; }
+  .ok { color: green; }
+  .bad { color: red; }
+  .room-footer { padding: 10px 16px; border-top: 1px solid #eee; background: #fafafa; font-size: 13px; }
+  .unlock { color: green; font-weight: bold; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Exponents Escape Room — Lesson Review</h1>
+  <p class="sub">Simplify each expression. Enter final answers with <b>positive exponents only</b>. Use / for fractions (e.g., 1/(2x^5)).</p>
+</header>
+<main class="rooms" id="rooms"></main>
+
+<script>
+function renderKatex(el, tex){ try { katex.render(tex, el, {throwOnError:false}); } catch { el.textContent = tex; } }
+
+const ROOMS = [
+  { name:"Room 1 — Mild 🌶", problems:[
+    {q:'\\dfrac{3y^3}{(3y^2 \\cdot 3y^4)^{-2}}', ans:['243y^15','243*y^15']},
+    {q:'\\left( \\dfrac{z \\cdot 4z}{3z^2} \\right)^{-2}', ans:['9/16']},
+  ]},
+  { name:"Room 2 — Medium 🌶🌶", problems:[
+    {q:'\\dfrac{(3p^2)^3}{p^{-4} \\cdot 3p}', ans:['9p^9','9*p^9']},
+    {q:'\\dfrac{(3s^0 \\cdot 3s)^{-2}}{4s^3}', ans:['1/(324s^5)','1/(324*s^5)']},
+  ]},
+  { name:"Room 3 — Hot 🌶🌶🌶", problems:[
+    {q:'\\dfrac{(tw^2)^3 \\cdot (3t^{-1}w^0)^2}{t^{-2}w^0}', ans:['9t^3w^6','9*t^3*w^6']},
+    {q:'\\dfrac{4a^3b^2}{(3a^0b^0)^3 \\cdot (3a^3b^2)^3}', ans:['4/(729a^6b^4)','4/(729*a^6*b^4)']},
+  ]},
+  { name:"Room 4 — Spicy 🌶🌶🌶🌶", problems:[
+    {q:'\\dfrac{4c^0d^3}{(3c^3)^3 \\cdot c}', ans:['4d^3/(27c^10)','4*d^3/(27*c^10)']},
+    {q:'\\dfrac{4m^3n^3}{(3m^0n^3)^{-3} \\cdot (3m^2n^3)^3}', ans:['4n^3/m^3','4*n^3/m^3']},
+  ]},
+];
+
+function buildRooms(){
+  const container=document.getElementById('rooms');
+  ROOMS.forEach((room,ri)=>{
+    const sec=document.createElement('section');
+    sec.className='room'+(ri>0?' locked':'');
+    sec.dataset.room=ri;
+    sec.innerHTML=`<div class="title">${room.name}</div><div class="content"></div><div class="room-footer">Solve all to unlock next room.</div>`;
+    const content=sec.querySelector('.content');
+    room.problems.forEach((p,pi)=>{
+      const prob=document.createElement('div');
+      prob.className='problem';
+      prob.dataset.i=pi;
+      prob.innerHTML=`<div class="idx">${pi+1}.</div><div class="q" data-tex="${p.q}"></div><div class="input-area"><input type=text placeholder="type your simplified answer"><button class=small>Check</button><span class=feedback></span></div>`;
+      content.appendChild(prob);
+    });
+    container.appendChild(sec);
+  });
+  document.querySelectorAll('.q').forEach(el=>{renderKatex(el,el.dataset.tex)});
+}
+
+function checkUnlock(ri){
+  const room=document.querySelector(`.room[data-room="${ri}"]`);
+  const solved=room.querySelectorAll('.feedback.ok').length;
+  const total=ROOMS[ri].problems.length;
+  if(solved===total && ri<ROOMS.length-1){
+    const next=document.querySelector(`.room[data-room="${ri+1}"]`);
+    next.classList.remove('locked');
+    room.querySelector('.room-footer').innerHTML='<span class=unlock>Room cleared! Next unlocked ✅</span>';
+  }
+}
+
+function init(){
+  buildRooms();
+  document.getElementById('rooms').addEventListener('click',e=>{
+    if(e.target.tagName==='BUTTON'){
+      const prob=e.target.closest('.problem');
+      const ri=+e.target.closest('.room').dataset.room;
+      const pi=+prob.dataset.i;
+      const input=prob.querySelector('input').value.replace(/\s+/g,'');
+      const fb=prob.querySelector('.feedback');
+      const ok=ROOMS[ri].problems[pi].ans.some(a=>a.replace(/\s+/g,'')===input);
+      if(ok){ fb.textContent='Correct!'; fb.className='feedback ok'; prob.style.borderColor='#86efac'; }
+      else { fb.textContent='Try again'; fb.className='feedback bad'; prob.style.borderColor='#fecaca'; }
+      checkUnlock(ri);
+    }
+  });
+  document.getElementById('rooms').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const prob=e.target.closest('.problem');
+      if(prob){ prob.querySelector('button').click(); }
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

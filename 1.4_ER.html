@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Escape Room – Simplifying Radicals (Student)</title>
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<style>
+  :root{--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#9ca3af;--accent:#38bdf8;--accent2:#a78bfa;}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1020,#0f172a 40%,#0b1020);color:var(--ink);font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+  .shell{max-width:980px;margin:32px auto;padding:20px}
+  .header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .h1{font-size:clamp(22px,3.6vw,34px);font-weight:800;letter-spacing:.5px}
+  .pill{padding:6px 10px;border-radius:999px;background:#0b2440;color:#cfefff;border:1px solid #1f3b63}
+  .card{background:linear-gradient(180deg,#0e1324,#0c1228);border:1px solid #1f2937;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+  .room-title{font-weight:700;font-size:20px;margin:0 0 8px}
+  .room-sub{color:var(--muted);font-size:14px;margin-top:-2px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
+  .q{border:1px solid #23304a;border-radius:12px;padding:12px;background:#0b1324}
+  .q h4{margin:0 0 8px;font-size:15px}
+  .math{font-size:18px;}
+  input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #273349;background:#0a1222;color:#e5e7eb}
+  .row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .btn{cursor:pointer;border:1px solid #2b3a58;background:#14223f;color:#e5e7eb;padding:9px 14px;border-radius:10px;font-weight:700}
+  .btn:hover{background:#183057}
+  .btn.primary{background:linear-gradient(90deg,#22d3ee,#818cf8);color:#061121;border:none}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .status{font-size:13px}
+  .ok{color:#34d399}
+  .bad{color:#f87171}
+  .note{font-size:14px;color:#c7d2fe}
+  .footer{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+  .locked{opacity:.6;pointer-events:none;}
+  .progress{height:10px;border-radius:999px;background:#0c1a30;border:1px solid #1e2a45;position:relative;overflow:hidden}
+  .bar{position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,#22d3ee,#a78bfa)}
+  code.k{background:#0b1a30;padding:2px 6px;border-radius:6px;border:1px solid #1e2a45}
+  .tinybar{display:flex;gap:6px;margin:6px 0 0}
+  .tinybtn{cursor:pointer;border:1px solid #2a3550;background:#0a152b;color:#e5e7eb;padding:4px 8px;border-radius:8px;font-weight:700;font-size:12px}
+  .tinybtn:hover{background:#12244a}
+  .toolbar{display:flex;gap:10px;margin:10px 0}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <div>
+        <div class="pill">Algebra I • Escape Room</div>
+        <div class="h1">Simplifying Radicals — Student Version</div>
+        <div class="note">Type answers in <b>simplest radical form</b>. Use the quick buttons <code class="k">√</code> and <code class="k">∛</code> to insert <code class="k">sqrt( )</code> or <code class="k">sqrt[3]( )</code>. Example: <code class="k">3x^2y*sqrt(5xy)</code>. Coefficients first; variables in alphabetical order.</div>
+        <div class="toolbar">
+          <button class="btn" id="topSqrt">√</button>
+          <button class="btn" id="topCbrt">∛</button>
+        </div>
+      </div>
+      <div style="min-width:220px">
+        <div class="pill" id="roomLabel">Room 1 of 5</div>
+        <div class="progress" aria-label="progress"><div class="bar" id="pbar"></div></div>
+      </div>
+    </div>
+
+    <div id="rooms"></div>
+
+    <div class="footer">
+      <div class="note">Solve all problems in a room to unlock the next door. Escape after Room 5!</div>
+      <div><button class="btn" id="resetBtn">Reset</button></div>
+    </div>
+  </div>
+
+<script>
+function norm(s){
+  return s.toLowerCase().replace(/√/g,'sqrt').replace(/\s+/g,'').replace(/\*+/g,'').replace(/\u221e/g,'inf');
+}
+function anyMatch(input, answers){
+  const N = norm(input);
+  return answers.some(a=> norm(a)===N);
+}
+function insertAtCursor(inp, text, caretShift=-1){
+  const start = inp.selectionStart ?? inp.value.length;
+  const end = inp.selectionEnd ?? inp.value.length;
+  const before = inp.value.slice(0,start);
+  const after = inp.value.slice(end);
+  inp.value = before + text + after;
+  const place = start + text.length + caretShift;
+  inp.focus();
+  inp.setSelectionRange(place, place);
+}
+function normalizeCubeAliases(ans){
+  return ans.replace(/cuberoot\(/g,'sqrt[3](').replace(/∛/g,'sqrt[3]').replace(/cb\(/g,'sqrt[3](');
+}
+
+const ROOMS = [
+  {title:'Room 1 — Square Roots (no variables)', subtitle:'Simplify each radical.', problems:[
+    {promptLatex:'\\sqrt{45}', accepted:['3*sqrt(5)','3sqrt(5)']},
+    {promptLatex:'\\sqrt{147}', accepted:['7*sqrt(3)','7sqrt(3)']},
+    {promptLatex:'\\sqrt{175}', accepted:['5*sqrt(7)','5sqrt(7)']},
+    {promptLatex:'-6\\sqrt{8}', accepted:['-12*sqrt(2)','-12sqrt(2)']},
+  ]},
+  {title:'Room 2 — Square Roots (with variables)', subtitle:'Assume variables represent nonnegative values.', problems:[
+    {promptLatex:'\\sqrt{28p^{3}}', accepted:['2p*sqrt(7p)','2*p*sqrt(7p)','2psqrt(7p)']},
+    {promptLatex:'\\sqrt{125x^{4}}', accepted:['5x^2*sqrt(5)','5*x^2*sqrt(5)','5x^2sqrt(5)']},
+    {promptLatex:'\\sqrt{128n^{4}}', accepted:['8n^2*sqrt(2)','8*n^2*sqrt(2)','8n^2sqrt(2)']},
+    {promptLatex:'-2\\sqrt{8xy^{3}}', accepted:['-4y*sqrt(2xy)','-4*y*sqrt(2xy)','-4y*sqrt(2*x*y)','-4y sqrt(2xy)']},
+  ]},
+  {title:'Room 3 — Cube Roots (no variables)', subtitle:'Simplify each cube root.', problems:[
+    {promptLatex:'\\sqrt[3]{216}', accepted:['6']},
+    {promptLatex:'\\sqrt[3]{432}', accepted:['6*sqrt[3](2)']},
+    {promptLatex:'\\sqrt[3]{54}', accepted:['3*sqrt[3](2)']},
+    {promptLatex:'\\sqrt[3]{250}', accepted:['5*sqrt[3](2)']},
+  ]},
+  {title:'Room 4 — Square Roots (coefficients & variables)', subtitle:'Simplify fully; put variables in alphabetical order.', problems:[
+    {promptLatex:'5\\sqrt{192xy^{3}}', accepted:['40y*sqrt(3xy)','40*y*sqrt(3xy)','40y*sqrt(3*x*y)']},
+    {promptLatex:'7\\sqrt{24pq r^{2}}', accepted:['14r*sqrt(6pq)','14*r*sqrt(6pq)']},
+    {promptLatex:'6\\sqrt{216x^{2}y^{4}z^{4}}', accepted:['36x y^2 z^2 * sqrt(6)','36xy^2z^2*sqrt(6)','36x*y^2*z^2*sqrt(6)']},
+    {promptLatex:'\\sqrt{32m^{3}p^{2}q^{2}}', accepted:['4mpq*sqrt(2m)','4*m*p*q*sqrt(2m)','4mpqsqrt(2m)']},
+  ]},
+  {title:'Room 5 — Cube Roots (with variables)', subtitle:'Simplify each cube root; assume variables are nonnegative.', problems:[
+    {promptLatex:'\\sqrt[3]{8x^{3}}', accepted:['2x']},
+    {promptLatex:'\\sqrt[3]{54x^{4}}', accepted:['3x*sqrt[3](2x)','3x sqrt[3](2x)','3x*sqrt[3](2*x)']},
+    {promptLatex:'\\sqrt[3]{81a^{5}b^{2}}', accepted:['3a*sqrt[3](3a^{2}b^{2})','3a*sqrt[3](3*a^2*b^2)']},
+    {promptLatex:'\\sqrt[3]{135a^{2}b^{8}c^{6}}', accepted:['3b^{2}c^{2}*sqrt[3](5a^{2}b^{2})','3*b^2*c^2*sqrt[3](5*a^2*b^2)']},
+    {promptLatex:'\\sqrt[3]{16mn^{3}}', accepted:['2n*sqrt[3](2m)','2*n*sqrt[3](2m)']}
+  ]}
+];
+
+const roomsDiv = document.getElementById('rooms');
+let currentRoom = 0; // 0..4
+
+function render(){
+  roomsDiv.innerHTML = '';
+  ROOMS.forEach((room, idx)=>{
+    const card = document.createElement('section');
+    card.className = 'card' + (idx>currentRoom? ' locked' : '');
+
+    const title = document.createElement('h3');
+    title.className = 'room-title';
+    title.textContent = room.title;
+    card.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'room-sub';
+    sub.textContent = room.subtitle;
+    card.appendChild(sub);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    room.problems.forEach((p, j)=>{
+      const item = document.createElement('div');
+      item.className = 'q';
+
+      const h4 = document.createElement('h4');
+      h4.textContent = `Problem ${j+1}`;
+      item.appendChild(h4);
+
+      const math = document.createElement('div');
+      math.className = 'math';
+      try { katex.render(p.promptLatex, math, {throwOnError:false}); }
+      catch(e) { math.textContent = p.promptLatex; }
+      item.appendChild(math);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Enter answer ... e.g., 3sqrt(5)';
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.appendChild(input);
+
+      const tiny = document.createElement('div');
+      tiny.className = 'tinybar';
+      const bSqrt = document.createElement('button');
+      bSqrt.type='button'; bSqrt.className='tinybtn'; bSqrt.textContent='√( )';
+      bSqrt.title='Insert sqrt( )';
+      bSqrt.addEventListener('click',()=> insertAtCursor(input,'sqrt()'));
+      const bCbrt = document.createElement('button');
+      bCbrt.type='button'; bCbrt.className='tinybtn'; bCbrt.textContent='∛( )';
+      bCbrt.title='Insert sqrt[3]( )';
+      bCbrt.addEventListener('click',()=> insertAtCursor(input,'sqrt[3]()'));
+      tiny.appendChild(bSqrt); tiny.appendChild(bCbrt);
+
+      const checkBtn = document.createElement('button');
+      checkBtn.className = 'btn';
+      checkBtn.textContent = 'Check';
+
+      const status = document.createElement('span');
+      status.className = 'status';
+      status.style.marginLeft = '6px';
+
+      checkBtn.addEventListener('click', ()=>{
+        let val = input.value.trim();
+        if(!val){ status.textContent = ' type an answer'; status.className = 'status bad'; return; }
+        val = normalizeCubeAliases(val);
+        if(anyMatch(val, p.accepted)){
+          status.textContent = ' correct';
+          status.className = 'status ok';
+          input.disabled = true; checkBtn.disabled = true; bSqrt.disabled = true; bCbrt.disabled = true;
+          updateProgress();
+        }else{
+          status.textContent = ' try again';
+          status.className = 'status bad';
+        }
+      });
+
+      row.appendChild(tiny);
+      row.appendChild(checkBtn);
+      row.appendChild(status);
+      item.appendChild(row);
+      grid.appendChild(item);
+    });
+
+    const footer = document.createElement('div');
+    footer.className = 'row';
+    const doorBtn = document.createElement('button');
+    doorBtn.className = 'btn primary';
+    doorBtn.textContent = idx < ROOMS.length-1 ? 'Unlock Next Room' : 'Escape!';
+
+    const doorMsg = document.createElement('span');
+    doorMsg.className = 'status';
+    doorMsg.textContent = ' Solve all problems to continue';
+
+    doorBtn.addEventListener('click', ()=>{
+      if(roomCleared(idx)){
+        if(idx < ROOMS.length-1){ currentRoom = idx+1; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+        else { celebrate(); }
+      }else{
+        doorMsg.textContent = ' You still have problems to solve in this room.';
+        doorMsg.className = 'status bad';
+      }
+    });
+
+    footer.appendChild(doorBtn);
+    footer.appendChild(doorMsg);
+    card.appendChild(grid);
+    card.appendChild(footer);
+
+    roomsDiv.appendChild(card);
+  });
+
+  document.getElementById('roomLabel').textContent = `Room ${currentRoom+1} of ${ROOMS.length}`;
+  updateProgress();
+}
+
+function roomCleared(idx){
+  const room = document.querySelectorAll('.card')[idx];
+  const inputs = room.querySelectorAll('input[type=text]');
+  return Array.from(inputs).every(i=> i.disabled);
+}
+
+function updateProgress(){
+  let total=0, correct=0;
+  document.querySelectorAll('.card').forEach(card=>{
+    const inputs = card.querySelectorAll('input[type=text]');
+    total += inputs.length;
+    inputs.forEach(i=>{ if(i.disabled) correct++; });
+  });
+  const pct = total? Math.round((correct/total)*100) : 0;
+  document.getElementById('pbar').style.width = pct+'%';
+}
+
+function celebrate(){
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed'; overlay.style.inset = 0; overlay.style.background = 'rgba(0,0,0,.8)';
+  overlay.style.backdropFilter = 'blur(2px)'; overlay.style.display = 'grid'; overlay.style.placeItems = 'center'; overlay.style.zIndex = 50;
+  overlay.innerHTML = `<div class="card" style="max-width:640px;text-align:center;padding:24px"><div style="font-size:28px;font-weight:800;margin-bottom:8px">🎉 You Escaped!</div><div style="color:var(--muted);margin-bottom:16px">Great work simplifying radicals. Screenshot this screen and submit to your teacher if asked.</div><button class="btn" onclick="document.body.removeChild(this.closest('[data-overlay]'))">Close</button></div>`;
+  overlay.setAttribute('data-overlay','1');
+  document.body.appendChild(overlay);
+}
+
+// top toolbar inserts into last-focused input
+let lastFocusedInput = null;
+addEventListener('focusin', (e)=>{ if(e.target && e.target.tagName==='INPUT') lastFocusedInput = e.target; });
+
+document.getElementById('topSqrt').addEventListener('click',()=>{ if(lastFocusedInput) insertAtCursor(lastFocusedInput,'sqrt()'); });
+document.getElementById('topCbrt').addEventListener('click',()=>{ if(lastFocusedInput) insertAtCursor(lastFocusedInput,'sqrt[3]()'); });
+
+// Reset
+const resetBtn = document.getElementById('resetBtn');
+resetBtn.addEventListener('click', ()=>{ currentRoom = 0; render(); });
+
+// Boot
+render();
+</script>
+</body>
+</html>
