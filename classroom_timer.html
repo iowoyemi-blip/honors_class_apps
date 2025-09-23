@@ -80,7 +80,7 @@
     .timer-surface {
       padding: clamp(2rem, 4vw, 3.5rem) clamp(2rem, 6vw, 4.5rem);
       display: grid;
-      gap: clamp(2rem, 5vw, 3.5rem);
+      gap: clamp(1.5rem, 4vw, 3rem);
       justify-items: center;
     }
 
@@ -165,7 +165,7 @@
     }
 
     .time-display {
-      font-size: clamp(3.5rem, 8vw, 6rem);
+      font-size: clamp(3.5rem, 8vw, 6.5rem);
       font-weight: 700;
       letter-spacing: 0.08em;
       color: var(--text-dark);
@@ -215,12 +215,13 @@
     }
 
     .status-banner {
-      font-size: 1rem;
-      color: rgba(15, 23, 42, 0.7);
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      color: rgba(15, 23, 42, 0.9);
       background: rgba(14, 165, 233, 0.1);
-      padding: 0.75rem 1.1rem;
-      border-radius: 16px;
-      font-weight: 500;
+      padding: 0.9rem clamp(1.1rem, 4vw, 2rem);
+      border-radius: 18px;
+      font-weight: 600;
+      text-align: center;
     }
 
     @media (max-width: 680px) {
@@ -239,6 +240,9 @@
     </header>
 
     <section class="timer-surface" aria-live="polite">
+      <div class="time-display" id="timeDisplay">05:00</div>
+      <div class="status-banner" id="statusBanner">Timer is idle</div>
+
       <div class="selectors">
         <div class="selector">
           <label for="minuteWheel">Minutes</label>
@@ -254,9 +258,6 @@
           </div>
         </div>
       </div>
-
-      <div class="time-display" id="timeDisplay">05:00</div>
-      <div class="status-banner" id="statusBanner">Timer is idle</div>
 
       <div class="controls">
         <button id="startPauseBtn" type="button">Start</button>
@@ -337,8 +338,8 @@
 
     function setStatus(message, accent = false) {
       statusBanner.textContent = message;
-      statusBanner.style.background = accent ? 'rgba(249, 115, 22, 0.16)' : 'rgba(14, 165, 233, 0.1)';
-      statusBanner.style.color = accent ? '#c2410c' : 'rgba(15, 23, 42, 0.7)';
+      statusBanner.style.background = accent ? 'rgba(249, 115, 22, 0.16)' : 'rgba(14, 165, 233, 0.12)';
+      statusBanner.style.color = accent ? '#c2410c' : 'rgba(15, 23, 42, 0.95)';
     }
 
     function disableSelectors(disabled) {
@@ -400,7 +401,7 @@
       startPauseBtn.textContent = 'Pause';
       resetBtn.disabled = false;
       disableSelectors(true);
-      setStatus('Timer is running—stay focused!');
+      setStatus('Timer is running - stay focused!');
     }
 
     function pauseTimer() {
