@@ -274,6 +274,7 @@
   <script>
     const WORK_DURATION = 30 * 60; // seconds
     const BREAK_DURATION = 5 * 60; // seconds
+    const TICK_INTERVAL = 250; // ms
 
     let isWorkMode = true;
     let isRunning = false;
@@ -281,6 +282,7 @@
     let timerId = null;
     let completedWorkSessions = 0;
     let lastQuoteIndex = -1;
+    let lastUpdateTimestamp = null;
 
     const timeDisplay = document.getElementById('timeDisplay');
     const modeIndicator = document.getElementById('modeIndicator');
@@ -350,21 +352,41 @@
       isWorkMode = !isWorkMode;
       remainingSeconds = isWorkMode ? WORK_DURATION : BREAK_DURATION;
       pickNewQuote();
+      if (isRunning) {
+        lastUpdateTimestamp = Date.now();
+      }
       playChime();
       updateStatusUI();
     }
 
-    function tick() {
-      if (!isRunning) return;
-      remainingSeconds -= 1;
-
-      if (remainingSeconds <= 0) {
-        remainingSeconds = 0;
-        updateStatusUI();
-        switchMode();
-      } else {
-        updateStatusUI();
+    function applyElapsedSeconds(totalSeconds) {
+      let secondsLeft = totalSeconds;
+      while (secondsLeft > 0 && isRunning) {
+        if (remainingSeconds <= 0) {
+          switchMode();
+          continue;
+        }
+        if (secondsLeft >= remainingSeconds) {
+          secondsLeft -= remainingSeconds;
+          remainingSeconds = 0;
+          updateStatusUI();
+          switchMode();
+        } else {
+          remainingSeconds -= secondsLeft;
+          secondsLeft = 0;
+          updateStatusUI();
+        }
       }
+    }
+
+    function tick() {
+      if (!isRunning || lastUpdateTimestamp === null) return;
+      const now = Date.now();
+      const elapsedMs = now - lastUpdateTimestamp;
+      if (elapsedMs < 1000) return;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      lastUpdateTimestamp = now - (elapsedMs % 1000);
+      applyElapsedSeconds(elapsedSeconds);
     }
 
     function startTimer() {
@@ -372,13 +394,16 @@
       isRunning = true;
       startPauseBtn.textContent = 'Pause';
       resetBtn.disabled = false;
-      timerId = setInterval(tick, 1000);
+      lastUpdateTimestamp = Date.now();
+      timerId = setInterval(tick, TICK_INTERVAL);
     }
 
     function pauseTimer() {
       isRunning = false;
       startPauseBtn.textContent = isWorkMode ? 'Resume Focus' : 'Resume Break';
+      lastUpdateTimestamp = null;
       clearInterval(timerId);
+      timerId = null;
     }
 
     function resetTimer() {
